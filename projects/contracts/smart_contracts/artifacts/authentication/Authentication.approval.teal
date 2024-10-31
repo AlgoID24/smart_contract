@@ -1,0 +1,151 @@
+#pragma version 10
+
+smart_contracts.authentication.contract.Authentication.approval_program:
+    txn ApplicationID
+    bnz main_entrypoint@2
+    callsub __init__
+
+main_entrypoint@2:
+    callsub __puya_arc4_router__
+    return
+
+
+// smart_contracts.authentication.contract.Authentication.__puya_arc4_router__() -> uint64:
+__puya_arc4_router__:
+    proto 0 1
+    txn NumAppArgs
+    bz __puya_arc4_router___bare_routing@6
+    method "update()bool"
+    method "delete()bool"
+    txna ApplicationArgs 0
+    match __puya_arc4_router___update_route@2 __puya_arc4_router___delete_route@3
+    int 0
+    retsub
+
+__puya_arc4_router___update_route@2:
+    txn OnCompletion
+    int UpdateApplication
+    ==
+    assert // OnCompletion is UpdateApplication
+    txn ApplicationID
+    assert // is not creating
+    callsub update
+    byte 0x00
+    int 0
+    uncover 2
+    setbit
+    byte 0x151f7c75
+    swap
+    concat
+    log
+    int 1
+    retsub
+
+__puya_arc4_router___delete_route@3:
+    txn OnCompletion
+    int DeleteApplication
+    ==
+    assert // OnCompletion is DeleteApplication
+    txn ApplicationID
+    assert // is not creating
+    callsub delete
+    byte 0x00
+    int 0
+    uncover 2
+    setbit
+    byte 0x151f7c75
+    swap
+    concat
+    log
+    int 1
+    retsub
+
+__puya_arc4_router___bare_routing@6:
+    txn OnCompletion
+    bnz __puya_arc4_router___after_if_else@10
+    txn ApplicationID
+    !
+    assert // is creating
+    int 1
+    retsub
+
+__puya_arc4_router___after_if_else@10:
+    int 0
+    retsub
+
+
+// smart_contracts.authentication.contract.Authentication.update() -> uint64:
+update:
+    proto 0 1
+    int 0
+    byte "admins"
+    app_global_get_ex
+    assert // check self.admins exists
+    int 0
+    extract_uint16
+    bz update_after_for@3
+    int 0
+    byte "admins"
+    app_global_get_ex
+    assert // check self.admins exists
+    extract 2 0
+    extract 0 32 // on error: Index access is out of bounds
+    txn Sender
+    ==
+    retsub
+
+update_after_for@3:
+    int 0
+    retsub
+
+
+// smart_contracts.authentication.contract.Authentication.delete() -> uint64:
+delete:
+    proto 0 1
+    int 0
+    byte "admins"
+    app_global_get_ex
+    assert // check self.admins exists
+    int 0
+    extract_uint16
+    bz delete_after_for@3
+    int 0
+    byte "admins"
+    app_global_get_ex
+    assert // check self.admins exists
+    extract 2 0
+    extract 0 32 // on error: Index access is out of bounds
+    txn Sender
+    ==
+    retsub
+
+delete_after_for@3:
+    int 0
+    retsub
+
+
+// smart_contracts.authentication.contract.Authentication.__init__() -> void:
+__init__:
+    proto 0 0
+    byte "admins"
+    byte 0x0000
+    app_global_put
+    int 0
+    byte "admins"
+    app_global_get_ex
+    assert // check self.admins exists
+    extract 2 0
+    txn Sender
+    concat
+    dup
+    len
+    int 32
+    /
+    itob
+    extract 6 2
+    swap
+    concat
+    byte "admins"
+    swap
+    app_global_put
+    retsub

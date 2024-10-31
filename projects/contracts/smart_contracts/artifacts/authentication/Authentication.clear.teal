@@ -1,0 +1,5 @@
+#pragma version 10
+
+smart_contracts.authentication.contract.Authentication.clear_state_program:
+    int 1
+    return
