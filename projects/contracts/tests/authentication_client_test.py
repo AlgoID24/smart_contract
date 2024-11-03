@@ -1,41 +1,63 @@
-import algokit_utils
+from dotenv import load_dotenv
+from decouple import config as conf
+from algosdk import mnemonic
 import pytest
-from algokit_utils import get_localnet_default_account
+from algokit_utils import Account
 from algokit_utils.config import config
 from algosdk.v2client.algod import AlgodClient
-from algosdk.v2client.indexer import IndexerClient
 
-from smart_contracts.artifacts.authentication.authentication_client import AuthenticationClient, DeleteArgs, Deploy, UpdateArgs
+from smart_contracts.artifacts.authentication.authentication_client import (
+    AuthenticationClient,
+)
+
+load_dotenv()
+
+
+@pytest.fixture(scope="session")
+def live_account() -> Account:
+    mnemonic_phrase = conf("DEPLOYER_MNEMONIC")
+    assert mnemonic_phrase, "DEPLOYER_MNEMONIC environment variable not set"
+    return Account(private_key=mnemonic.to_private_key(mnemonic_phrase))
 
 
 @pytest.fixture(scope="session")
 def authentication_client(
-    algod_client: AlgodClient, indexer_client: IndexerClient
+    algod_client: AlgodClient, live_account: Account
 ) -> AuthenticationClient:
     config.configure(
         debug=True,
-        # trace_all=True,
+        trace_all=True,
     )
 
     client = AuthenticationClient(
-        algod_client,
-        creator=get_localnet_default_account(algod_client),
-        indexer_client=indexer_client,
+        algod_client, app_id=728343574, signer=live_account, sender=live_account.address
     )
 
-    client.deploy(
-        update_args=Deploy[UpdateArgs](args=UpdateArgs()),
-        delete_args=Deploy[DeleteArgs](args=DeleteArgs()),
-        on_schema_break=algokit_utils.OnSchemaBreak.AppendApp,
-        on_update=algokit_utils.OnUpdate.AppendApp,
-    )
+    # client.deploy(
+    #     update_args=Deploy[UpdateArgs](args=UpdateArgs()),
+    #     delete_args=Deploy[DeleteArgs](args=DeleteArgs()),
+    #     on_schema_break=algokit_utils.OnSchemaBreak.AppendApp,
+    #     on_update=algokit_utils.OnUpdate.AppendApp,
+    # )
     return client
 
 
-def update(authentication_client: AuthenticationClient) -> None:
-    result = authentication_client.update_update()
+def test_update(authentication_client: AuthenticationClient) -> None:
+    authentication_client.update_update()
 
-    assert result.return_value == "Hello, World"
+
+def test_create_algo_id(
+    authentication_client: AuthenticationClient, live_account: Account
+):
+    result = authentication_client.create_algo_id(
+        user_address=live_account.address,
+        unit_name="AID-01",
+        full_name="Ezekiel Victor",
+        metadata_url="https://example.com",
+    )
+    print("Created AlgoID asset ID: ", result.return_value)
+
+
 #
 #
 # def test_simulate_says_hello_with_correct_budget_consumed(
