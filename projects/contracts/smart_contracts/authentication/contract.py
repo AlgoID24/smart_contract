@@ -1,4 +1,4 @@
-from algopy import ARC4Contract, Global, Txn, arc4, itxn, urange
+from algopy import ARC4Contract, Asset, Global, Txn, arc4, gtxn, itxn, urange
 from algopy.op import ITxn
 
 
@@ -24,7 +24,6 @@ class Authentication(ARC4Contract):
     @arc4.abimethod()
     def create_algo_id(
         self,
-        user_address: arc4.Address,
         unit_name: arc4.String,
         full_name: arc4.String,
         metadata_url: arc4.String,
@@ -43,6 +42,23 @@ class Authentication(ARC4Contract):
         algo_id_txn.submit()
         asset = ITxn.created_asset_id()
 
+        return arc4.UInt64(asset.id)
+
+    @arc4.abimethod()
+    def tranfer_algo_id_token(
+        self,
+        asset: Asset,
+        user_address: arc4.Address,
+    ) -> bool:
+
+        transfer_txn = itxn.AssetTransfer(
+            fee=1000,
+            xfer_asset=asset,
+            asset_receiver=user_address.native,
+            asset_amount=1,
+        )
+        transfer_txn.submit()
+
         asset_freeze_txn = itxn.AssetFreeze(
             freeze_account=user_address.native,
             freeze_asset=asset,
@@ -50,8 +66,5 @@ class Authentication(ARC4Contract):
             fee=1000,
         )
         asset_freeze_txn.submit()
-        return arc4.UInt64(asset.id)
 
-    # def accpt_payment(self, txn: gtxn.PaymentTransaction):
-    #     assert txn.sender === "soem"
-    #     assert txn.amount === 1020202301
+        return True

@@ -14,12 +14,13 @@ main_entrypoint@2:
 __puya_arc4_router__:
     proto 0 1
     txn NumAppArgs
-    bz __puya_arc4_router___bare_routing@7
+    bz __puya_arc4_router___bare_routing@8
     method "update()bool"
     method "delete()bool"
-    method "create_algo_id(address,string,string,string)uint64"
+    method "create_algo_id(string,string,string)uint64"
+    method "tranfer_algo_id_token(asset,address)bool"
     txna ApplicationArgs 0
-    match __puya_arc4_router___update_route@2 __puya_arc4_router___delete_route@3 __puya_arc4_router___create_algo_id_route@4
+    match __puya_arc4_router___update_route@2 __puya_arc4_router___delete_route@3 __puya_arc4_router___create_algo_id_route@4 __puya_arc4_router___tranfer_algo_id_token_route@5
     int 0
     retsub
 
@@ -70,7 +71,6 @@ __puya_arc4_router___create_algo_id_route@4:
     txna ApplicationArgs 1
     txna ApplicationArgs 2
     txna ApplicationArgs 3
-    txna ApplicationArgs 4
     callsub create_algo_id
     byte 0x151f7c75
     swap
@@ -79,16 +79,38 @@ __puya_arc4_router___create_algo_id_route@4:
     int 1
     retsub
 
-__puya_arc4_router___bare_routing@7:
+__puya_arc4_router___tranfer_algo_id_token_route@5:
     txn OnCompletion
-    bnz __puya_arc4_router___after_if_else@11
+    !
+    assert // OnCompletion is NoOp
+    txn ApplicationID
+    assert // is not creating
+    txna ApplicationArgs 1
+    btoi
+    txnas Assets
+    txna ApplicationArgs 2
+    callsub tranfer_algo_id_token
+    byte 0x00
+    int 0
+    uncover 2
+    setbit
+    byte 0x151f7c75
+    swap
+    concat
+    log
+    int 1
+    retsub
+
+__puya_arc4_router___bare_routing@8:
+    txn OnCompletion
+    bnz __puya_arc4_router___after_if_else@12
     txn ApplicationID
     !
     assert // is creating
     int 1
     retsub
 
-__puya_arc4_router___after_if_else@11:
+__puya_arc4_router___after_if_else@12:
     int 0
     retsub
 
@@ -143,9 +165,9 @@ delete_after_for@3:
     retsub
 
 
-// smart_contracts.authentication.contract.Authentication.create_algo_id(user_address: bytes, unit_name: bytes, full_name: bytes, metadata_url: bytes) -> bytes:
+// smart_contracts.authentication.contract.Authentication.create_algo_id(unit_name: bytes, full_name: bytes, metadata_url: bytes) -> bytes:
 create_algo_id:
-    proto 4 1
+    proto 3 1
     frame_dig -1
     extract 2 0
     frame_dig -3
@@ -170,19 +192,38 @@ create_algo_id:
     itxn_field Fee
     itxn_submit
     itxn CreatedAssetID
+    itob
+    retsub
+
+
+// smart_contracts.authentication.contract.Authentication.tranfer_algo_id_token(asset: uint64, user_address: bytes) -> uint64:
+tranfer_algo_id_token:
+    proto 2 1
+    itxn_begin
+    int 1
+    itxn_field AssetAmount
+    frame_dig -1
+    itxn_field AssetReceiver
+    frame_dig -2
+    itxn_field XferAsset
+    int axfer
+    itxn_field TypeEnum
+    int 1000
+    itxn_field Fee
+    itxn_submit
     itxn_begin
     int 1
     itxn_field FreezeAssetFrozen
-    dup
+    frame_dig -2
     itxn_field FreezeAsset
-    frame_dig -4
+    frame_dig -1
     itxn_field FreezeAssetAccount
     int afrz
     itxn_field TypeEnum
     int 1000
     itxn_field Fee
     itxn_submit
-    itob
+    int 1
     retsub
 
 

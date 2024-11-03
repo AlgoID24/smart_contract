@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 from decouple import config as conf
-from algosdk import mnemonic
+from algosdk import atomic_transaction_composer, mnemonic, transaction
 import pytest
 from algokit_utils import Account
 from algokit_utils.config import config
@@ -50,12 +50,34 @@ def test_create_algo_id(
     authentication_client: AuthenticationClient, live_account: Account
 ):
     result = authentication_client.create_algo_id(
-        user_address=live_account.address,
         unit_name="AID-01",
         full_name="Ezekiel Victor",
         metadata_url="https://example.com",
     )
-    print("Created AlgoID asset ID: ", result.return_value)
+
+    sp = authentication_client.algod_client.suggested_params()
+
+    optin_txn = transaction.AssetOptInTxn(
+        sender=live_account.address, sp=sp, index=result.return_value
+    )
+
+    optin_txn = optin_txn.sign(live_account.private_key)
+
+    txn_id = authentication_client.algod_client.send_transaction(optin_txn)
+    transaction.wait_for_confirmation(
+        authentication_client.algod_client, txid=txn_id, wait_rounds=4
+    )
+
+    result2 = authentication_client.tranfer_algo_id_token(
+        user_address=live_account.address, asset=result.return_value
+    )
+
+    print(
+        "Created AlgoID asset ID: ",
+        result.return_value,
+        "Status: ",
+        result2.return_value,
+    )
 
 
 #
